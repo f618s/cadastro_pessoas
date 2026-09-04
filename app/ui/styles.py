@@ -133,6 +133,7 @@ QPushButton#botaoPerigo:hover {
 
 QTableWidget {
     background-color: white;
+    color: #1c2733;
     border: 1px solid #dbe1e8;
     border-radius: 6px;
     gridline-color: #e7ebef;
