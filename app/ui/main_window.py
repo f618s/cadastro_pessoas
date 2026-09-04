@@ -224,7 +224,7 @@ class CadastroWindow(QMainWindow):
     # ------------------------------------------------------------------
 
     def _consultar_endereco(self, cep: str):
-        if self._cep_worker is not None and self._cep_worker.isRunning():
+        if self._cep_worker is not None:
             self.statusBar().showMessage("Já existe uma consulta de CEP em andamento...", 4000)
             return
 
@@ -240,8 +240,15 @@ class CadastroWindow(QMainWindow):
         self._cep_worker = CepWorker(cep, parent=self)
         self._cep_worker.sucesso.connect(self._ao_consultar_endereco_sucesso)
         self._cep_worker.falha.connect(self._ao_consultar_endereco_falha)
-        self._cep_worker.finished.connect(self._cep_worker.deleteLater)
+        self._cep_worker.finished.connect(self._ao_finalizar_worker_cep)
         self._cep_worker.start()
+
+    def _ao_finalizar_worker_cep(self):
+        """Libera a referência da thread assim que ela termina, evitando
+        que o objeto seja acessado depois de já ter sido destruído."""
+        if self._cep_worker is not None:
+            self._cep_worker.deleteLater()
+            self._cep_worker = None
 
     def _ao_consultar_endereco_sucesso(self, endereco: dict):
         self.form_endereco.preencher_endereco(endereco)
