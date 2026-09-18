@@ -22,6 +22,7 @@ class PersonTable(QGroupBox):
     excluir_solicitado = Signal(int)
     pesquisa_alterada = Signal(str)
     atualizar_solicitado = Signal()
+    exportar_pdf_solicitado = Signal()
 
     def __init__(self, parent=None):
         super().__init__("Cadastros realizados", parent)
@@ -39,8 +40,14 @@ class PersonTable(QGroupBox):
         self.btn_atualizar.setObjectName("botaoSecundario")
         self.btn_atualizar.clicked.connect(self.atualizar_solicitado.emit)
 
+        self.btn_exportar_pdf = QPushButton("Exportar PDF")
+        self.btn_exportar_pdf.setObjectName("botaoSecundario")
+        self.btn_exportar_pdf.setToolTip("Exportar os cadastros exibidos na tabela para um arquivo PDF")
+        self.btn_exportar_pdf.clicked.connect(self.exportar_pdf_solicitado.emit)
+
         barra_topo.addWidget(self.pesquisa)
         barra_topo.addWidget(self.btn_atualizar)
+        barra_topo.addWidget(self.btn_exportar_pdf)
         layout.addLayout(barra_topo)
 
         self.tabela = QTableWidget()
@@ -107,6 +114,9 @@ class PersonTable(QGroupBox):
 
     def tem_selecao(self) -> bool:
         return self.tabela.currentRow() >= 0
+
+    def obter_termo_pesquisa(self) -> str:
+        return self.pesquisa.text().strip()
 
     def carregar(self, registros) -> None:
         self.tabela.setRowCount(len(registros))

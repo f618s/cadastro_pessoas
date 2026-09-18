@@ -25,3 +25,7 @@ class CepRespostaInvalidaError(RuntimeError):
 
 class BancoDadosError(Exception):
     """Erro ao acessar/gravar no banco de dados local."""
+
+
+class ExportacaoPdfError(Exception):
+    """Erro ao gerar o arquivo PDF com os cadastros."""

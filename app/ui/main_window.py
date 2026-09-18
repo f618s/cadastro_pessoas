@@ -7,9 +7,11 @@ nas classes em app/ui/widgets - aqui só existe a "cola" entre eles.
 """
 
 import logging
+from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QFileDialog,
     QHBoxLayout,
     QLabel,
     QMainWindow,
@@ -19,8 +21,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.exceptions import BancoDadosError
+from app.exceptions import BancoDadosError, ExportacaoPdfError
 from app.models import Pessoa
+from app.services.pdf_export import exportar_para_pdf
 from app.validators import (
     somente_numeros,
     validar_celular,
@@ -131,6 +134,7 @@ class CadastroWindow(QMainWindow):
         self.tabela_pessoas.excluir_solicitado.connect(self._excluir_pessoa)
         self.tabela_pessoas.pesquisa_alterada.connect(self._carregar_tabela)
         self.tabela_pessoas.atualizar_solicitado.connect(lambda: self._carregar_tabela())
+        self.tabela_pessoas.exportar_pdf_solicitado.connect(self._exportar_pdf)
         layout_principal.addWidget(self.tabela_pessoas)
 
         self.setCentralWidget(central)
@@ -394,6 +398,60 @@ class CadastroWindow(QMainWindow):
             self.tabela_pessoas.carregar(registros)
         except BancoDadosError as erro:
             QMessageBox.critical(self, "Erro ao carregar cadastros", str(erro))
+
+    def _exportar_pdf(self):
+        termo_pesquisa = self.tabela_pessoas.obter_termo_pesquisa()
+
+        try:
+            registros = self.db.listar(termo_pesquisa)
+        except BancoDadosError as erro:
+            QMessageBox.critical(self, "Erro ao exportar", str(erro))
+            return
+
+        if not registros:
+            QMessageBox.information(
+                self,
+                "Nada para exportar",
+                "Não há cadastros para exportar com o filtro atual.",
+            )
+            return
+
+        nome_sugerido = "cadastros.pdf"
+        caminho_escolhido, _filtro = QFileDialog.getSaveFileName(
+            self,
+            "Exportar cadastros para PDF",
+            nome_sugerido,
+            "Arquivo PDF (*.pdf)",
+        )
+
+        if not caminho_escolhido:
+            return  # usuário cancelou a caixa de diálogo
+
+        caminho = Path(caminho_escolhido)
+        if caminho.suffix.lower() != ".pdf":
+            caminho = caminho.with_suffix(".pdf")
+
+        try:
+            exportar_para_pdf(caminho, registros, termo_pesquisa)
+        except ExportacaoPdfError as erro:
+            QMessageBox.critical(self, "Erro ao exportar PDF", str(erro))
+            self.statusBar().showMessage("Não foi possível exportar o PDF.", 5000)
+            return
+        except Exception as erro:  # última linha de defesa
+            logger.exception("Erro inesperado ao exportar PDF")
+            QMessageBox.critical(
+                self,
+                "Erro inesperado",
+                f"Ocorreu um erro inesperado ao exportar o PDF.\n\nDetalhes técnicos: {erro}",
+            )
+            return
+
+        self.statusBar().showMessage(f"PDF exportado com sucesso: {caminho.name}", 5000)
+        QMessageBox.information(
+            self,
+            "Exportação concluída",
+            f"Os cadastros foram exportados com sucesso para:\n{caminho}",
+        )
 
     def _excluir_pessoa(self, pessoa_id: int):
         resposta = QMessageBox.question(
